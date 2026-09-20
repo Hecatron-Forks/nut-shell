@@ -93,9 +93,10 @@ impl CommandHandler<MinimalConfig> for MinHandler {
     }
 
     #[cfg(feature = "async")]
-    async fn execute_async(
+    async fn execute_async<'a>(
         &self,
         id: &str,
+	_path: &'a [&'a str],
         args: &[&str],
     ) -> Result<Response<MinimalConfig>, CliError> {
         match id {

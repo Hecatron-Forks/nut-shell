@@ -8,7 +8,12 @@ use nut_shell::{
 pub struct ExampleHandler;
 
 impl CommandHandler<DefaultConfig> for ExampleHandler {
-    fn execute_sync(&self, id: &str, args: &[&str]) -> Result<Response<DefaultConfig>, CliError> {
+    fn execute_sync<'a>(
+        &self,
+        id: &str,
+        _path: &'a [&'a str],
+        args: &[&str],
+    ) -> Result<Response<DefaultConfig>, CliError> {
         match id {
             "system_reboot" => Ok(Response::success("System rebooting...\r\nGoodbye!").indented()),
             "system_status" => {
@@ -56,9 +61,10 @@ impl CommandHandler<DefaultConfig> for ExampleHandler {
     }
 
     #[cfg(feature = "async")]
-    async fn execute_async(
+    async fn execute_async<'a>(
         &self,
         id: &str,
+        _path: &'a [&'a str],
         _args: &[&str],
     ) -> Result<Response<DefaultConfig>, CliError> {
         // This example doesn't use async commands

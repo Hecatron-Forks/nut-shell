@@ -11,13 +11,23 @@ use crate::response::Response;
 /// Maps command IDs to execution functions (dispatches on unique ID, not display name).
 pub trait CommandHandler<C: ShellConfig> {
     /// Execute synchronous command by unique ID.
-    fn execute_sync(&self, id: &str, args: &[&str]) -> Result<Response<C>, CliError>;
+    fn execute_sync<'a>(
+        &self,
+        id: &str,
+        path: &'a [&'a str],
+        args: &[&str],
+    ) -> Result<Response<C>, CliError>;
 
     /// Execute asynchronous command by unique ID (requires `async` feature).
     /// Uses `async fn` without Send bounds for both single and multi-threaded executors.
     #[cfg(feature = "async")]
     #[allow(async_fn_in_trait)]
-    async fn execute_async(&self, id: &str, args: &[&str]) -> Result<Response<C>, CliError>;
+    async fn execute_async<'a>(
+        &self,
+        id: &str,
+        path: &'a [&'a str],
+        args: &[&str],
+    ) -> Result<Response<C>, CliError>;
 }
 
 #[cfg(test)]
@@ -29,9 +39,10 @@ mod tests {
     struct TestHandler;
 
     impl CommandHandler<DefaultConfig> for TestHandler {
-        fn execute_sync(
+        fn execute_sync<'a>(
             &self,
             id: &str,
+            _path: &'a [&'a str],
             _args: &[&str],
         ) -> Result<Response<DefaultConfig>, CliError> {
             match id {
@@ -41,9 +52,10 @@ mod tests {
         }
 
         #[cfg(feature = "async")]
-        async fn execute_async(
+        async fn execute_async<'a>(
             &self,
             id: &str,
+            _path: &'a [&'a str],
             _args: &[&str],
         ) -> Result<Response<DefaultConfig>, CliError> {
             match id {
@@ -56,11 +68,11 @@ mod tests {
     #[test]
     fn test_sync_handler() {
         let handler = TestHandler;
-        let result = handler.execute_sync("test", &[]);
+        let result = handler.execute_sync("test", &[], &[]);
         assert!(result.is_ok());
         assert_eq!(result.unwrap().message.as_str(), "OK");
 
-        let result = handler.execute_sync("unknown", &[]);
+        let result = handler.execute_sync("unknown", &[], &[]);
         assert_eq!(result, Err(CliError::CommandNotFound));
     }
 
@@ -68,11 +80,11 @@ mod tests {
     #[tokio::test]
     async fn test_async_handler() {
         let handler = TestHandler;
-        let result = handler.execute_async("async-test", &[]).await;
+        let result = handler.execute_async("async-test", &[], &[]).await;
         assert!(result.is_ok());
         assert_eq!(result.unwrap().message.as_str(), "Async OK");
 
-        let result = handler.execute_async("unknown", &[]).await;
+        let result = handler.execute_async("unknown", &[], &[]).await;
         assert_eq!(result, Err(CliError::CommandNotFound));
     }
 }

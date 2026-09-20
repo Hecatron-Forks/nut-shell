@@ -767,6 +767,32 @@ where
         }
     }
 
+    /// Extract the path into a vector we can pass back to the handler
+    ///
+    /// At the root directory this will return []
+    /// At a subdirectory it will return something similar to ["dir1", "dir2"]
+    /// This allows for the use of the same directory in multiple locations within the command tree
+    fn get_path_arr<'a>(
+        &'a self,
+        path: &heapless::Vec<usize, 8>,
+    ) -> Result<heapless::Vec<&'a str, 8>, CliError> {
+        let mut result = heapless::Vec::new();
+        let mut current = self.tree;
+
+        for &index in path.iter() {
+            match current.children.get(index) {
+                Some(Node::Directory(dir)) => {
+                    result.push(dir.name).map_err(|_| CliError::InvalidPath)?;
+                    current = dir;
+                }
+                Some(Node::Command(_)) | None => {
+                    return Err(CliError::InvalidPath);
+                }
+            }
+        }
+        Ok(result)
+    }
+
     /// Execute a tree path (navigation or command execution).
     ///
     /// Resolves the path and either:
@@ -830,7 +856,10 @@ where
                 match cmd_meta.kind {
                     CommandKind::Sync => {
                         // Execute synchronous tree command (dispatch by unique ID)
-                        self.handler.execute_sync(cmd_meta.id, args)
+                        // TODO: use C::MAX_PATH_DEPTH when const generics stabilize
+                        let path_arr = self.get_path_arr(&new_path).unwrap();
+                        self.handler
+                            .execute_sync(cmd_meta.id, path_arr.as_slice(), args)
                     }
                     #[cfg(feature = "async")]
                     CommandKind::Async => {
@@ -909,11 +938,18 @@ where
                 match cmd_meta.kind {
                     CommandKind::Sync => {
                         // Sync command in async context - call directly
-                        self.handler.execute_sync(cmd_meta.id, args)
+                        // TODO: use C::MAX_PATH_DEPTH when const generics stabilize
+                        let path_arr = self.get_path_arr(&new_path).unwrap();
+                        self.handler
+                            .execute_sync(cmd_meta.id, path_arr.as_slice(), args)
                     }
                     CommandKind::Async => {
                         // Async command - await execution
-                        self.handler.execute_async(cmd_meta.id, args).await
+                        // TODO: use C::MAX_PATH_DEPTH when const generics stabilize
+                        let path_arr = self.get_path_arr(&new_path).unwrap();
+                        self.handler
+                            .execute_async(cmd_meta.id, path_arr.as_slice(), args)
+                            .await
                     }
                 }
             }
@@ -1281,18 +1317,20 @@ mod tests {
     // Mock handler
     struct MockHandler;
     impl CommandHandler<DefaultConfig> for MockHandler {
-        fn execute_sync(
+        fn execute_sync<'a>(
             &self,
             _id: &str,
+            _path: &'a [&'a str],
             _args: &[&str],
         ) -> Result<crate::response::Response<DefaultConfig>, crate::error::CliError> {
             Err(crate::error::CliError::CommandNotFound)
         }
 
         #[cfg(feature = "async")]
-        async fn execute_async(
+        async fn execute_async<'a>(
             &self,
             _id: &str,
+            _path: &'a [&'a str],
             _args: &[&str],
         ) -> Result<crate::response::Response<DefaultConfig>, crate::error::CliError> {
             Err(crate::error::CliError::CommandNotFound)

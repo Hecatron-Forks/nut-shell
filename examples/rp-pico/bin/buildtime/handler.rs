@@ -53,7 +53,12 @@ impl PicoHandler {
 }
 
 impl CommandHandler<DefaultConfig> for PicoHandler {
-    fn execute_sync(&self, id: &str, args: &[&str]) -> Result<Response<DefaultConfig>, CliError> {
+    fn execute_sync<'a>(
+        &self,
+        id: &str,
+        _path: &'a [&'a str],
+        args: &[&str],
+    ) -> Result<Response<DefaultConfig>, CliError> {
         match id {
             "system_info" => self.system_info(),
             // System diagnostic commands
@@ -76,9 +81,10 @@ impl CommandHandler<DefaultConfig> for PicoHandler {
     }
 
     #[cfg(feature = "async")]
-    async fn execute_async(
+    async fn execute_async<'a>(
         &self,
         _id: &str,
+        _path: &'a [&'a str],
         _args: &[&str],
     ) -> Result<Response<DefaultConfig>, CliError> {
         // basic example is synchronous-only, no async commands

@@ -8,6 +8,7 @@
 
 #![allow(dead_code)]
 
+use core::fmt::Write;
 use heapless::{Deque, String as HString, Vec as HVec};
 use nut_shell::CharIo;
 use nut_shell::config::DefaultConfig;
@@ -368,10 +369,24 @@ pub const CMD_HW_TEMP: CommandMeta<MockAccessLevel> = CommandMeta {
     max_args: 0,
 };
 
+pub const CMD_HW_DIRPATH: CommandMeta<MockAccessLevel> = CommandMeta {
+    id: "hw_dir_path",
+    name: "dir_path",
+    description: "Read the directory path",
+    access_level: MockAccessLevel::User,
+    kind: CommandKind::Sync,
+    min_args: 0,
+    max_args: 0,
+};
+
 /// Hardware subdirectory
 pub const DIR_HARDWARE: Directory<MockAccessLevel> = Directory {
     name: "hardware",
-    children: &[Node::Command(&CMD_HW_LED), Node::Command(&CMD_HW_TEMP)],
+    children: &[
+        Node::Command(&CMD_HW_LED),
+        Node::Command(&CMD_HW_TEMP),
+        Node::Command(&CMD_HW_DIRPATH),
+    ],
     access_level: MockAccessLevel::User,
 };
 
@@ -427,7 +442,8 @@ pub const DIR_DEBUG: Directory<MockAccessLevel> = Directory {
 /// │   │   └── ping (User, 1-2 args)
 /// │   └── hardware/ (User)
 /// │       ├── led (User, 1 arg)
-/// │       └── temperature (User, 0 args)
+/// │       ├── temperature (User, 0 args)
+/// │       └── full_path (User, 0 args)
 /// └── debug/ (Admin)
 ///     ├── memory (Admin, 0-2 args)
 ///     └── registers (Admin, 1 arg)
@@ -491,7 +507,12 @@ fn format_msg(parts: &[&str]) -> HString<256> {
 }
 
 impl CommandHandler<DefaultConfig> for MockHandler {
-    fn execute_sync(&self, id: &str, args: &[&str]) -> Result<Response<DefaultConfig>, CliError> {
+    fn execute_sync<'a>(
+        &self,
+        id: &str,
+        path: &'a [&'a str],
+        args: &[&str],
+    ) -> Result<Response<DefaultConfig>, CliError> {
         match id {
             // Root commands
             "help" => Ok(Response::success("Help text here")),
@@ -530,6 +551,15 @@ impl CommandHandler<DefaultConfig> for MockHandler {
             }
             "hw_temp" => Ok(Response::success("Temperature: 23.5°C")),
 
+            // Test the directory path output
+            "hw_dir_path" => {
+                let mut path_string = heapless::String::<128>::new();
+                for part in path {
+                    write!(path_string, "/{}", part).unwrap();
+                }
+                Ok(Response::success(path_string.as_str()))
+            }
+
             // Debug commands
             "debug_mem" => {
                 if args.is_empty() {
@@ -566,9 +596,10 @@ impl CommandHandler<DefaultConfig> for MockHandler {
     }
 
     #[cfg(feature = "async")]
-    async fn execute_async(
+    async fn execute_async<'a>(
         &self,
         id: &str,
+        _path: &'a [&'a str],
         args: &[&str],
     ) -> Result<Response<DefaultConfig>, CliError> {
         match id {
@@ -742,9 +773,10 @@ mod tests {
             // Validate hardware/ subdirectory (2 commands)
             if let Some(Node::Directory(hardware)) = dir.find_child("hardware") {
                 assert_eq!(hardware.name, "hardware");
-                assert_eq!(hardware.children.len(), 2);
+                assert_eq!(hardware.children.len(), 3);
                 assert!(hardware.find_child("led").is_some());
                 assert!(hardware.find_child("temperature").is_some());
+                assert!(hardware.find_child("dir_path").is_some());
             } else {
                 panic!("Expected hardware directory");
             }

@@ -56,6 +56,17 @@ fn test_path_based_command_execution() {
 
 #[test]
 #[cfg(not(feature = "authentication"))]
+fn test_dir_path() {
+    let mut shell = helpers::create_test_shell();
+
+    helpers::execute_command(&mut shell, "system");
+    helpers::execute_command(&mut shell, "hardware");
+    let output = helpers::execute_command(&mut shell, "dir_path");
+    helpers::assert_contains_all(&output, &["/system/hardware"]);
+}
+
+#[test]
+#[cfg(not(feature = "authentication"))]
 fn test_command_with_leading_spaces() {
     let mut shell = helpers::create_test_shell();
 

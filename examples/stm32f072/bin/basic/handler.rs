@@ -80,7 +80,12 @@ impl Stm32Handler {
 }
 
 impl<C: ShellConfig> CommandHandler<C> for Stm32Handler {
-    fn execute_sync(&self, id: &str, args: &[&str]) -> Result<Response<C>, CliError> {
+    fn execute_sync<'a>(
+        &self,
+        id: &str,
+        _path: &'a [&'a str],
+        args: &[&str],
+    ) -> Result<Response<C>, CliError> {
         match id {
             "system_info" => self.system_info(),
             // System diagnostic commands
@@ -102,7 +107,12 @@ impl<C: ShellConfig> CommandHandler<C> for Stm32Handler {
     }
 
     #[cfg(feature = "async")]
-    async fn execute_async(&self, _id: &str, _args: &[&str]) -> Result<Response<C>, CliError> {
+    async fn execute_async<'a>(
+        &self,
+        _id: &str,
+        _path: &'a [&'a str],
+        _args: &[&str],
+    ) -> Result<Response<C>, CliError> {
         // Basic example is synchronous-only, no async commands
         Err(CliError::CommandNotFound)
     }

@@ -92,7 +92,12 @@ impl H753Handler {
 }
 
 impl<C: ShellConfig> CommandHandler<C> for H753Handler {
-    fn execute_sync(&self, id: &str, args: &[&str]) -> Result<Response<C>, CliError> {
+    fn execute_sync<'a>(
+        &self,
+        id: &str,
+        _path: &'a [&'a str],
+        args: &[&str],
+    ) -> Result<Response<C>, CliError> {
         match id {
             "system_info" => self.system_info(),
             "system_uptime" => self.uptime::<C>(),
@@ -110,7 +115,12 @@ impl<C: ShellConfig> CommandHandler<C> for H753Handler {
     }
 
     #[cfg(feature = "async")]
-    async fn execute_async(&self, _id: &str, _args: &[&str]) -> Result<Response<C>, CliError> {
+    async fn execute_async<'a>(
+        &self,
+        _id: &str,
+        _path: &'a [&'a str],
+        _args: &[&str],
+    ) -> Result<Response<C>, CliError> {
         Err(CliError::CommandNotFound)
     }
 }

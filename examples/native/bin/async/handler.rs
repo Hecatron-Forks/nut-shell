@@ -9,7 +9,12 @@ use tokio::time::{Duration, sleep};
 pub struct AsyncHandler;
 
 impl CommandHandler<DefaultConfig> for AsyncHandler {
-    fn execute_sync(&self, id: &str, args: &[&str]) -> Result<Response<DefaultConfig>, CliError> {
+    fn execute_sync<'a>(
+        &self,
+        id: &str,
+        _path: &'a [&'a str],
+        args: &[&str],
+    ) -> Result<Response<DefaultConfig>, CliError> {
         match id {
             "sync_echo" => {
                 if args.is_empty() {
@@ -39,9 +44,10 @@ impl CommandHandler<DefaultConfig> for AsyncHandler {
     }
 
     #[cfg(feature = "async")]
-    async fn execute_async(
+    async fn execute_async<'a>(
         &self,
         id: &str,
+        _path: &'a [&'a str],
         args: &[&str],
     ) -> Result<Response<DefaultConfig>, CliError> {
         match id {
