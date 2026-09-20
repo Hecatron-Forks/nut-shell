@@ -85,7 +85,12 @@ const ROOT: Directory<Level> = Directory {
 struct MinHandler;
 
 impl CommandHandler<MinimalConfig> for MinHandler {
-    fn execute_sync(&self, id: &str, args: &[&str]) -> Result<Response<MinimalConfig>, CliError> {
+    fn execute_sync<'a>(
+        &self,
+        id: &str,
+        _path: &'a [&'a str],
+        args: &[&str],
+    ) -> Result<Response<MinimalConfig>, CliError> {
         match id {
             "status" => status_cmd::<MinimalConfig>(args),
             _ => Err(CliError::CommandNotFound),
@@ -96,7 +101,7 @@ impl CommandHandler<MinimalConfig> for MinHandler {
     async fn execute_async<'a>(
         &self,
         id: &str,
-	_path: &'a [&'a str],
+        _path: &'a [&'a str],
         args: &[&str],
     ) -> Result<Response<MinimalConfig>, CliError> {
         match id {
